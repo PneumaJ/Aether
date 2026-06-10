@@ -1,0 +1,187 @@
+@import "tailwindcss";
+
+/* ============================================
+   Settings CSS Variables (updated at runtime)
+   ============================================ */
+
+:root {
+  --settings-font-color: rgba(255, 255, 255, 0.95);
+  --settings-font-size: 14px;
+  --settings-bg-opacity-focused: 0.45;
+  --settings-bg-opacity-blurred: 0.08;
+  --settings-bg-image: none;
+}
+
+/* ============================================
+   Aether Theme Tokens
+   ============================================ */
+
+@theme {
+  --color-glass-bg: rgba(255, 255, 255, 0.12);
+  --color-glass-bg-hover: rgba(255, 255, 255, 0.20);
+  --color-glass-border: rgba(255, 255, 255, 0.18);
+  --color-glass-border-strong: rgba(255, 255, 255, 0.30);
+  --color-glass-text: var(--settings-font-color);
+  --color-glass-text-muted: color-mix(in srgb, var(--settings-font-color) 55%, transparent);
+  --color-glass-text-done: color-mix(in srgb, var(--settings-font-color) 35%, transparent);
+  --color-accent: #60a5fa;
+  --color-accent-hover: #93bbfd;
+  --color-danger: #f87171;
+  --color-danger-hover: #fca5a5;
+}
+
+/* ============================================
+   Base Reset
+   ============================================ */
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: transparent !important;
+  user-select: none;
+  font-size: var(--settings-font-size);
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    "PingFang SC",
+    "Microsoft YaHei",
+    sans-serif;
+}
+
+/* ============================================
+   Frosted Glass Shell
+   ============================================ */
+
+.glass-shell {
+  position: relative;
+}
+
+.glass-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: var(--settings-bg-image);
+  background-size: cover;
+  background-position: center;
+  border-radius: 11px;
+  pointer-events: none;
+}
+
+.glass-shell {
+  height: 100vh;
+  width: 100vw;
+  background: rgba(30, 30, 30, 0.55);
+  border: 1px solid var(--color-glass-border);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+@supports (backdrop-filter: blur(12px)) {
+  .glass-shell {
+    background: var(--color-glass-bg);
+    backdrop-filter: blur(12px) saturate(1.2);
+    -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  }
+}
+
+.glass-shell {
+  transition: background 0.35s ease;
+}
+
+.glass-focused {
+  background: rgba(0, 0, 0, var(--settings-bg-opacity-focused)) !important;
+}
+
+.glass-blurred {
+  background: rgba(255, 255, 255, var(--settings-bg-opacity-blurred)) !important;
+}
+
+/* ============================================
+   Drag Region
+   ============================================ */
+
+.drag-region {
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+
+.no-drag {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+
+/* ============================================
+   Custom Scrollbar
+   ============================================ */
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* ============================================
+   Animations
+   ============================================ */
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.15s ease-out;
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.2s ease-out;
+}
+
+/* ============================================
+   Focus
+   ============================================ */
+
+input:focus {
+  outline: none;
+}
+
+input::placeholder {
+  color: var(--color-glass-text-muted);
+}

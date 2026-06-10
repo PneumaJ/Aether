@@ -1,0 +1,30 @@
+[package]
+name = "aether"
+version = "0.1.0"
+description = "A floating frosted-glass daily plan tracker"
+authors = ["Aether"]
+edition = "2021"
+
+[lib]
+name = "aether_lib"
+crate-type = ["staticlib", "rlib"]
+
+[package.metadata]
+name = "aether"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
+tauri-plugin-sql = { version = "2", features = ["sqlite"] }
+tauri-plugin-autostart = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true
