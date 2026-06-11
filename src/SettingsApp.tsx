@@ -1,11 +1,35 @@
+import { useEffect } from "react";
 import { useSettings } from "./hooks/useSettings";
 import { ColorPicker } from "./components/settings/ColorPicker";
 import { SliderField } from "./components/settings/SliderField";
 import { CheckboxField } from "./components/settings/CheckboxField";
 import { ImagePicker } from "./components/settings/ImagePicker";
+import { getCurrentWebviewWindow, getAllWebviewWindows } from "@tauri-apps/api/webviewWindow";
+
+const appWindow = getCurrentWebviewWindow();
+
+function focusMain() {
+  getAllWebviewWindows().then((wins) => {
+    wins.find((w) => w.label === "main")?.setFocus();
+  });
+}
+
+function focusSelf() {
+  appWindow.setFocus();
+}
 
 export function SettingsApp() {
   const { settings, updateSetting, save, resetDefaults } = useSettings();
+
+  // Lock settings window font-size independently of the main window setting
+  useEffect(() => {
+    document.documentElement.style.fontSize = "14px";
+  }, []);
+
+  const handleSave = async () => {
+    await save();
+    appWindow.close();
+  };
 
   if (!settings) {
     return (
@@ -17,7 +41,6 @@ export function SettingsApp() {
 
   return (
     <div className="h-screen flex flex-col bg-white text-gray-900 font-sans select-none">
-      {/* Title bar area — since decorations:true, native titlebar is shown */}
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
         {/* Appearance section */}
         <section>
@@ -39,34 +62,38 @@ export function SettingsApp() {
               unit="px"
               onChange={(v) => updateSetting("font_size", v)}
             />
-            <SliderField
-              label="背景不透明度（聚焦）"
-              value={Math.round(settings.bg_opacity_focused * 100)}
-              min={5}
-              max={95}
-              step={5}
-              unit="%"
-              onChange={(v) => updateSetting("bg_opacity_focused", v / 100)}
-            />
-            <SliderField
-              label="背景不透明度（失焦）"
-              value={Math.round(settings.bg_opacity_blurred * 100)}
-              min={0}
-              max={50}
-              step={1}
-              unit="%"
-              onChange={(v) => updateSetting("bg_opacity_blurred", v / 100)}
-            />
+            <div onPointerDown={focusMain}>
+              <SliderField
+                label="背景不透明度（聚焦）"
+                value={Math.round(settings.bg_opacity_focused * 100)}
+                min={5}
+                max={95}
+                step={5}
+                unit="%"
+                onChange={(v) => updateSetting("bg_opacity_focused", v / 100)}
+              />
+            </div>
+            <div onPointerDown={focusSelf}>
+              <SliderField
+                label="背景不透明度（失焦）"
+                value={Math.round(settings.bg_opacity_blurred * 100)}
+                min={0}
+                max={50}
+                step={1}
+                unit="%"
+                onChange={(v) => updateSetting("bg_opacity_blurred", v / 100)}
+              />
+            </div>
           </div>
         </section>
 
         {/* Background section */}
         <section>
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
-            背景
+            背景图片
           </h2>
           <ImagePicker
-            label="背景图片"
+            label=""
             value={settings.bg_image_path ?? ""}
             onChange={(v) => updateSetting("bg_image_path", v || null)}
           />
@@ -109,7 +136,7 @@ export function SettingsApp() {
           恢复默认
         </button>
         <button
-          onClick={save}
+          onClick={handleSave}
           className="px-5 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-md transition-colors cursor-pointer"
         >
           保存

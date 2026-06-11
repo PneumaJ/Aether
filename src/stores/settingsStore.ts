@@ -16,6 +16,11 @@ interface SettingsState {
 }
 
 function applyCssSettings(settings: AppSettings) {
+  // CSS variables are only relevant for the main window; the settings webview
+  // has its own locked font-size and doesn't render the frosted glass shell.
+  const win = getCurrentWebviewWindow();
+  if (win.label !== "main") return;
+
   const root = document.documentElement;
   root.style.setProperty("--settings-font-color", settings.font_color);
   root.style.setProperty("--settings-font-size", `${settings.font_size}px`);

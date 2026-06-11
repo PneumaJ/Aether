@@ -3,23 +3,31 @@ import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useUIStore } from "../../stores/uiStore";
 import { cn } from "../../lib/cn";
 
-type ResizeDirection = "NorthWest" | "NorthEast" | "SouthWest" | "SouthEast";
+type EdgeDir = "North" | "South" | "East" | "West";
+type CornerDir = "NorthWest" | "NorthEast" | "SouthWest" | "SouthEast";
 
 interface AppShellProps {
   children: ReactNode;
 }
 
-const RESIZE_CORNERS: { corner: string; direction: ResizeDirection; position: string; cursor: string }[] = [
-  { corner: "top-left", direction: "NorthWest", position: "top-0 left-0", cursor: "cursor-nwse-resize" },
-  { corner: "top-right", direction: "NorthEast", position: "top-0 right-0", cursor: "cursor-nesw-resize" },
-  { corner: "bottom-left", direction: "SouthWest", position: "bottom-0 left-0", cursor: "cursor-nesw-resize" },
-  { corner: "bottom-right", direction: "SouthEast", position: "bottom-0 right-0", cursor: "cursor-nwse-resize" },
+const RESIZE_EDGES: { edge: string; direction: EdgeDir; style: React.CSSProperties; cursor: string }[] = [
+  { edge: "top", direction: "North", style: { top: 0, left: 0, right: 0, height: 6 }, cursor: "cursor-n-resize" },
+  { edge: "bottom", direction: "South", style: { bottom: 0, left: 0, right: 0, height: 6 }, cursor: "cursor-s-resize" },
+  { edge: "left", direction: "West", style: { top: 0, left: 0, bottom: 0, width: 6 }, cursor: "cursor-w-resize" },
+  { edge: "right", direction: "East", style: { top: 0, right: 0, bottom: 0, width: 6 }, cursor: "cursor-e-resize" },
+];
+
+const RESIZE_CORNERS: { corner: string; direction: CornerDir; style: React.CSSProperties; cursor: string }[] = [
+  { corner: "nw", direction: "NorthWest", style: { top: 0, left: 0, width: 12, height: 12 }, cursor: "cursor-nwse-resize" },
+  { corner: "ne", direction: "NorthEast", style: { top: 0, right: 0, width: 12, height: 12 }, cursor: "cursor-nesw-resize" },
+  { corner: "sw", direction: "SouthWest", style: { bottom: 0, left: 0, width: 12, height: 12 }, cursor: "cursor-nesw-resize" },
+  { corner: "se", direction: "SouthEast", style: { bottom: 0, right: 0, width: 12, height: 12 }, cursor: "cursor-nwse-resize" },
 ];
 
 export function AppShell({ children }: AppShellProps) {
   const isFocused = useUIStore((s) => s.isWindowFocused);
 
-  const handleResizeStart = useCallback(async (direction: ResizeDirection) => {
+  const handleResizeStart = useCallback(async (direction: EdgeDir | CornerDir) => {
     await getCurrentWebviewWindow().startResizeDragging(direction);
   }, []);
 
@@ -31,12 +39,25 @@ export function AppShell({ children }: AppShellProps) {
       )}
       style={{ color: "var(--settings-font-color)" }}
     >
-      {/* Resize handles at 4 corners */}
-      {RESIZE_CORNERS.map(({ corner, direction, position, cursor }) => (
+      {/* Edge resize handles — thin strips along borders */}
+      {RESIZE_EDGES.map(({ edge, direction, style, cursor }) => (
+        <div
+          key={edge}
+          className={`no-drag absolute ${cursor} z-40`}
+          style={style}
+          onPointerDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleResizeStart(direction);
+          }}
+        />
+      ))}
+      {/* Corner resize handles — small squares at corners overlapping edge strips */}
+      {RESIZE_CORNERS.map(({ corner, direction, style, cursor }) => (
         <div
           key={corner}
-          className={`no-drag absolute ${position} ${cursor} z-50`}
-          style={{ width: "28px", height: "28px" }}
+          className={`no-drag absolute ${cursor} z-45`}
+          style={style}
           onPointerDown={(e) => {
             e.preventDefault();
             e.stopPropagation();

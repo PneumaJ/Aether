@@ -9,6 +9,21 @@ export function useWindow() {
   const setWindowFocused = useUIStore((s) => s.setWindowFocused);
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
 
+  const persistPosition = useCallback(async () => {
+    try {
+      const pos = await appWindow.outerPosition();
+      const size = await appWindow.innerSize();
+      const store = useSettingsStore.getState();
+      store.updateSetting("window_x", pos.x);
+      store.updateSetting("window_y", pos.y);
+      store.updateSetting("window_width", size.width);
+      store.updateSetting("window_height", size.height);
+      await invoke("save_settings", { settings: useSettingsStore.getState().settings });
+    } catch {
+      // Window might be closed/minimized
+    }
+  }, [appWindow]);
+
   useEffect(() => {
     let unlistenFocus: (() => void) | undefined;
     let unlistenMoved: (() => void) | undefined;
@@ -16,25 +31,10 @@ export function useWindow() {
 
     appWindow.onFocusChanged(({ payload: focused }) => {
       setWindowFocused(focused);
+      appWindow.setSkipTaskbar(!focused);
     }).then((fn) => {
       unlistenFocus = fn;
     });
-
-    const persistPosition = async () => {
-      try {
-        const pos = await appWindow.outerPosition();
-        const size = await appWindow.innerSize();
-        const store = useSettingsStore.getState();
-        store.updateSetting("window_x", pos.x);
-        store.updateSetting("window_y", pos.y);
-        store.updateSetting("window_width", size.width);
-        store.updateSetting("window_height", size.height);
-        // Persist position to disk (skip store.save() to avoid autostart side-effects)
-        await invoke("save_settings", { settings: useSettingsStore.getState().settings });
-      } catch {
-        // Window might be closed/minimized
-      }
-    };
 
     // Track position changes for "remember position" setting
     appWindow.onMoved(() => {
@@ -62,15 +62,19 @@ export function useWindow() {
       unlistenResized?.();
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
-  }, []);
+  }, [persistPosition]);
 
   const minimize = useCallback(() => {
     appWindow.minimize();
   }, [appWindow]);
 
-  const close = useCallback(() => {
+  const close = useCallback(async () => {
+    const { settings, loaded } = useSettingsStore.getState();
+    if (loaded && settings.remember_position) {
+      await persistPosition();
+    }
     appWindow.close();
-  }, [appWindow]);
+  }, [appWindow, persistPosition]);
 
   return { minimize, close };
 }

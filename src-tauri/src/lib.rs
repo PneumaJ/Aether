@@ -40,15 +40,22 @@ pub fn run() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             Some(vec![]),
         ))
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // Load and apply saved settings
             let settings = settings::load_settings(&app.handle());
             if let Some(window) = app.get_webview_window("main") {
+                let _ = window.set_focus();
                 let _ = window.set_ignore_cursor_events(settings.click_through);
                 if settings.remember_position {
+                    // Restore size BEFORE position to avoid position-dependent resize
+                    if let (Some(w), Some(h)) = (settings.window_width, settings.window_height) {
+                        use tauri::PhysicalSize;
+                        let _ = window.set_size(PhysicalSize::new(w as u32, h as u32));
+                    }
                     if let (Some(x), Some(y)) = (settings.window_x, settings.window_y) {
-                        use tauri::LogicalPosition;
-                        let _ = window.set_position(LogicalPosition::new(x, y));
+                        use tauri::PhysicalPosition;
+                        let _ = window.set_position(PhysicalPosition::new(x as i32, y as i32));
                     }
                 }
             }

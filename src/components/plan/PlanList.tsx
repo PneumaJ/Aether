@@ -38,7 +38,7 @@ function SortableGroup({
   }
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} autoScroll={false}>
       <SortableContext items={items.map((p) => p.id)} strategy={verticalListSortingStrategy}>
         {items.map((plan) => (
           <PlanItem
