@@ -32,3 +32,30 @@ pub fn save_settings(app: tauri::AppHandle, settings: AppSettings, persist: Opti
 pub fn quit_app(app: tauri::AppHandle) {
     app.exit(0);
 }
+
+#[tauri::command]
+pub fn show_settings_window(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("settings") {
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.set_focus();
+        let _ = app.emit("app://settings-shown", ());
+    } else {
+        tauri::webview::WebviewWindowBuilder::new(
+            &app,
+            "settings",
+            tauri::WebviewUrl::App("index.html".into()),
+        )
+        .title("Aether - 设置")
+        .inner_size(420.0, 520.0)
+        .resizable(false)
+        .decorations(true)
+        .transparent(false)
+        .always_on_top(true)
+        .center()
+        .visible(true)
+        .build()
+        .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}

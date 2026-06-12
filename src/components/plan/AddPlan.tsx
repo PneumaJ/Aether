@@ -10,8 +10,7 @@ export function AddPlan() {
   const { addPlan, addDailyPlan } = usePlans();
 
   const handleSubmit = () => {
-    const value = inputRef.current?.value ?? "";
-    const trimmed = value.trim();
+    const trimmed = content.trim();
     if (!trimmed) return;
     const promise = planType === "daily" ? addDailyPlan(trimmed) : addPlan(trimmed);
     promise

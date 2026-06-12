@@ -1,8 +1,5 @@
 import { useUIStore } from "../../stores/uiStore";
-
-function fmtDate(y: number, m: number, d: number): string {
-  return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-}
+import { fmtDate } from "../../lib/date";
 
 function formatDate(dateStr: string): string {
   const [y, m, dNum] = dateStr.split("-").map(Number);
@@ -24,7 +21,10 @@ function formatDate(dateStr: string): string {
 }
 
 export function DateGroup() {
-  const { selectedDate, goToPrevDay, goToNextDay, goToToday } = useUIStore();
+  const selectedDate = useUIStore((s) => s.selectedDate);
+  const goToPrevDay = useUIStore((s) => s.goToPrevDay);
+  const goToNextDay = useUIStore((s) => s.goToNextDay);
+  const goToToday = useUIStore((s) => s.goToToday);
 
   return (
     <div className="flex items-center justify-between px-4 py-2">

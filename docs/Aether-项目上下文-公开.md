@@ -1,8 +1,8 @@
 # 对话上下文 — Aether 项目完整上下文（公开版）
 
-> **生成日期**：2026-06-11  
-> **涵盖阶段**：项目初始化（骨架搭建）→ 设置窗口与系统功能 → UI 打磨与 Bug 修复 → 打包发布  
-> **当前状态**：**已构建并打包为 NSIS/MSI 安装程序，核心功能全部完成，零已知 bug**
+> **生成日期**：2026-06-12  
+> **涵盖阶段**：项目初始化（骨架搭建）→ 设置窗口与系统功能 → UI 打磨与 Bug 修复 → 打包发布 → 代码审查与优化  
+> **当前版本**：**v0.1.1** — 代码审查与优化完成，9 项修复，零已知 bug
 
 ---
 
@@ -57,6 +57,18 @@ CREATE TABLE plans (
 | 16 | 设置界面字体大小被主窗口设置影响 | `applyCssSettings` 在每个 `updateSetting` 时将 CSS 变量写入设置窗口 DOM | ① SettingsApp `useEffect` 锁定 `documentElement.fontSize = "14px"` ② `applyCssSettings` 检测 webview label 非 "main" 时直接跳过 | 打磨 |
 | 17 | 应用启动后非聚焦状态 | 未主动调用 `setFocus()` | `lib.rs` setup 中调用 `window.set_focus()` | 打磨 |
 | 18 | 设置保存后不关闭 | 缺少关闭逻辑 | `handleSave` 中 `await save()` 后 `appWindow.close()` | 打磨 |
+| 19 | 编辑前台背景时 WebView2 颜色对话框自动关闭 | `<input type="color">` 原生对话框在任何焦点变化时关闭 | 预览事件系统：`app://preview-settings`（CSS 即时预览）、`app://preview-focused`（强制 glass-focused 类），设置窗口不转移焦点 | 优化 |
+| 20 | 设置修改直接持久化，关闭即保存 | `updateSetting` 调用了 `invoke("save_settings")` | 改为 CSS 事件预览主窗口，仅在显式点击"保存"后持久化到磁盘；关闭/取消时发出 `app://preview-revert` 恢复主窗口 CSS | 优化 |
+| 21 | 取消后重新打开设置显示未保存的旧数据 | 设置窗口隐藏后 Zustand store 状态保留在内存中 | 设置窗口保持隐藏（不销毁），`app://settings-shown` 事件重新从磁盘加载设置 | 优化 |
+| 22 | 设置窗口保存后重新打开卡死/白屏，主窗口冻结 | 销毁+重建同名 label 在 Tauri v2 中导致挂起 | 回归隐藏模式：两个窗口的 `CloseRequested` 都 `prevent_close()` + `hide()`；`show_settings_window` 发出 `app://settings-shown` 事件触发重新加载 | 优化 |
+| 23 | `reorderPlan` 拖拽排序跨会话失效 | 仅持久化了被拖拽项的 `sort_order`，其余项保留数据库中的旧值 | 新增 `bulkUpdateSortOrders`，遍历重排后全部项目并持久化各自的 `sort_order` | 优化 |
+| 24 | Tailwind v4 JIT 无法检测动态拼接的 cursor 类名 | `${cursor}` 字符串插值对 Tailwind 扫描器不透明 | 将 cursor 从 CSS 类改为 inline style，完全绕过 JIT | 优化 |
+| 25 | `IconButton` 组件完全未被使用 | — | 删除文件及空目录 `src/components/common/` | 优化 |
+| 26 | `fmtDate`/`today`/`shiftDate` 在 `uiStore.ts` 和 `DateGroup.tsx` 中重复定义 | — | 提取到新建的 `src/lib/date.ts` 共享工具模块 | 优化 |
+| 27 | `AddPlan` 混用受控 state 和非受控 ref | `handleSubmit` 读 `inputRef.current?.value` 而非 `content` state | 改为读取 `content` state，保持纯受控模式 | 优化 |
+| 28 | `DateGroup` 全量订阅 `useUIStore` 导致无关重渲染 | `isLoading`/`headerText` 等变化都会触发重渲染 | 拆分为 4 个独立 selector | 优化 |
+| 29 | `useWindow` 快速卸载时事件监听器可能泄漏 | `.then()` 回调在组件卸载后才执行 | 添加 `cancelled` 标志，清理函数中取消尚未 resolve 的 listener | 优化 |
+| 30 | `hexToRgba` 不 clamp alpha 且不支持 3 位 hex | — | 添加 `Math.max(0, Math.min(1, alpha))` 约束 + 3 位 hex 自动展开 | 优化 |
 
 ---
 
@@ -96,6 +108,17 @@ CREATE TABLE plans (
 - [x] 设置字体大小隔离（主窗口可变 / 设置窗口固定 14px）
 - [x] 设置保存后关闭窗口
 - [x] 启动默认聚焦
+
+### 阶段四：代码审查与优化（已完成，v0.1.1）
+- [x] 预览事件系统（解决 WebView2 颜色对话框焦点限制）
+- [x] 设置持久化模型修正（仅在显式保存时写磁盘）
+- [x] 设置窗口隐藏/重新加载模式（修复销毁重建导致的卡死）
+- [x] `reorderPlan` 批量持久化全部 sort_order
+- [x] Tailwind 动态 cursor → inline style
+- [x] 删除未使用代码 + 提取重复工具函数
+- [x] Zustand selector 优化 + 事件监听器清理保护
+- [x] `hexToRgba` 健壮性增强
+- [x] 打包 v0.1.1（MSI + NSIS）
 
 ---
 
@@ -171,30 +194,43 @@ CREATE TABLE plans (
 }
 ```
 
-### 设置窗口生命周期
+### 设置窗口生命周期（v0.1.1 最终方案）
 ```
 Rust setup() → WebviewWindowBuilder 创建（hidden）
      ↓
-用户右键/托盘 → getByLabel → show() + setFocus()
+用户右键/托盘 → show_settings_window 命令
+     ├── 若窗口存在 → unminimize() + show() + setFocus()
+     │       └── emit("app://settings-shown") → SettingsApp 从磁盘重新加载设置
+     └── 若窗口不存在 → WebviewWindowBuilder 创建（visible: true）
      ↓
 用户点 X → CloseRequested → prevent_close() + hide()
+     ├── 若未保存 → emit("app://preview-revert") → 主窗口 CSS 回滚
+     └── Zustand store 状态保留（下次 show 时由 app://settings-shown 覆盖）
      ↓
-再次右键/托盘 → show() + setFocus()
+再次右键/托盘 → show() + emit("app://settings-shown") → 重新从磁盘加载
 ```
 
-### 设置实时生效机制
+### 设置预览与持久化模型（v0.1.1 最终方案）
+
 ```
-用户调整滑块 → updateSetting()
-    ├── 本地 applyCssSettings()（即时视觉反馈，仅 main 窗口）
-    └── invoke("save_settings", { persist: false })
-         ├── Rust 端应用 click_through
-         ├── emit("app://settings-changed") → 主窗口接收 → applyCssSettings()
-         └── 不写磁盘
+用户调整设置 → updateSetting()
+    ├── Zustand store 本地状态更新（不持久化）
+    ├── applyCssSettings() → 设置窗口自身 CSS（仅 main 窗口）
+    ├── emit("app://preview-settings", settings) → 主窗口 AppShell 监听
+    │       └── applyCssSettings(event.payload) → CSS 变量即时生效
+    └── 前台背景控制额外 emit("app://preview-focused")
+            └── 主窗口 AppShell 强制添加 glass-focused 类（600ms 超时）
 
 用户点保存 → save()
-    └── invoke("save_settings", { persist: true })
-         ├── 写入 aether_settings.json
-         └── 处理 autostart
+    ├── invoke("save_settings", { persist: true })
+    │       ├── Rust 端应用 click_through
+    │       ├── 写入 aether_settings.json
+    │       └── emit("app://settings-changed") → 全局同步
+    └── 处理 autostart
+
+用户点取消 / X → close()
+    └── emit("app://preview-revert")
+            └── 主窗口 AppShell 从 store 恢复原始 CSS（回滚预览）
 ```
 
 ### 字体颜色动态化
@@ -272,11 +308,11 @@ applyCssSettings() 入口检测：
 | **Tauri** | `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`, `src-tauri/capabilities/default.json`, `src-tauri/src/lib.rs`, `src-tauri/src/main.rs`, `src-tauri/build.rs` |
 | **前端核心** | `src/main.tsx`, `src/App.tsx`, `src/index.css`, `src/vite-env.d.ts` |
 | **类型** | `src/types/plan.ts` |
-| **工具** | `src/lib/cn.ts` |
+| **工具** | `src/lib/cn.ts`, `src/lib/date.ts` |
 | **DB** | `src/db/database.ts` |
 | **Store** | `src/stores/uiStore.ts`, `src/stores/planStore.ts` |
 | **Hook** | `src/hooks/useWindow.ts`, `src/hooks/usePlans.ts` |
-| **组件** | `src/components/layout/AppShell.tsx`, `src/components/layout/Titlebar.tsx`, `src/components/plan/DateGroup.tsx`, `src/components/plan/PlanList.tsx`, `src/components/plan/PlanItem.tsx`, `src/components/plan/AddPlan.tsx`, `src/components/common/IconButton.tsx` |
+| **组件** | `src/components/layout/AppShell.tsx`, `src/components/layout/Titlebar.tsx`, `src/components/plan/DateGroup.tsx`, `src/components/plan/PlanList.tsx`, `src/components/plan/PlanItem.tsx`, `src/components/plan/AddPlan.tsx` |
 | **图标** | `src-tauri/icons/tray-icon.png`, `public/tray-icon.png` |
 
 ### 修改文件（阶段二/三）
@@ -295,7 +331,24 @@ applyCssSettings() 入口检测：
 | `src/SettingsApp.tsx` | 保存后关闭窗口、字体大小锁定（useEffect inline style） |
 | `src/components/plan/PlanList.tsx` | `autoScroll={false}` 防止拖拽无限扩展 |
 | `src/components/settings/ImagePicker.tsx` | 完全重写：文件对话框 + `<img>` 缩略图 + 路径省略号 |
-| `package.json` | 添加 `@tauri-apps/plugin-dialog` |
+| `package.json` | 添加 `@tauri-apps/plugin-dialog`、版本号 0.1.0 → 0.1.1 |
+
+### 修改文件（阶段四：代码审查与优化，v0.1.1）
+| 文件 | 变更 |
+|------|------|
+| `src/db/database.ts` | 新增 `bulkUpdateSortOrders` 批量更新函数 |
+| `src/stores/planStore.ts` | `reorderPlan` 改为批量持久化全部 sort_order |
+| `src/stores/settingsStore.ts` | `hexToRgba`：alpha 约束 + 3 位 hex 支持 |
+| `src/stores/uiStore.ts` | 移除重复函数，改为从 `src/lib/date.ts` 导入 |
+| `src/hooks/useWindow.ts` | 添加 `cancelled` 标志防止事件监听器泄漏 |
+| `src/components/layout/AppShell.tsx` | 预览事件系统 + cursor inline style |
+| `src/components/plan/AddPlan.tsx` | 改为纯受控模式 |
+| `src/components/plan/DateGroup.tsx` | 导入共享工具函数 + Zustand selector 拆分 |
+| `src/SettingsApp.tsx` | 预览事件 emit + revert + `app://settings-shown` 重新加载 |
+| `src-tauri/src/commands.rs` | 新增 `show_settings_window` 命令 |
+| `src-tauri/src/lib.rs` | settings 窗口隐藏模式 + 托盘集成 |
+| `src/lib/date.ts` | **新建** — 共享日期工具函数 |
+| `src/components/common/IconButton.tsx` | **删除** — 完全未被使用 |
 
 ---
 
@@ -303,7 +356,7 @@ applyCssSettings() 入口检测：
 
 | # | 问题 | 优先级 | 位置 | 状态 |
 |---|------|--------|------|------|
-| — | 无已知问题 | — | — | 全部功能正常，零 bug |
+| — | 无已知问题 | — | — | v0.1.1 全部功能正常，零 bug |
 
 ---
 
@@ -322,8 +375,8 @@ pnpm tauri dev
 ```bash
 pnpm tauri build
 # 输出:
-#   src-tauri/target/release/bundle/nsis/Aether_0.1.0_x64-setup.exe
-#   src-tauri/target/release/bundle/msi/Aether_0.1.0_x64_en-US.msi
+#   src-tauri/target/release/bundle/nsis/Aether_0.1.1_x64-setup.exe
+#   src-tauri/target/release/bundle/msi/Aether_0.1.1_x64_en-US.msi
 ```
 
 ### 注意事项
@@ -392,11 +445,12 @@ pnpm tauri build
 
 ## 🚀 下一步计划
 
-当前版本（v0.1.0）核心功能已全部完成。可能的后续方向：
+当前版本（v0.1.1）核心功能已全部完成，代码已审查优化。可能的后续方向：
 
 1. **功能增强**：每日计划模板、数据导出/导入、多日视图
 2. **UI 增强**：更多主题色方案、动画过渡、自定义毛玻璃强度
-3. **跨平台**：macOS 适配（需处理 NSWindow 差异和 tray-icon 兼容性）
+3. **跨平台**：macOS 适配
+4. **测试**：端到端测试（Playwright + Tauri）
 
 ---
 
@@ -411,6 +465,11 @@ pnpm tauri build
 - **Tauri v2 tray-icon feature**：`Cargo.toml` 中必须显式声明，否则 `TrayIconBuilder` 完全不可用
 - **乐观更新心智模型**：Zustand store 先 set 后 await DB，失败时不回滚——对于本地 SQLite（几乎不会失败）是合理的简化
 - **手动创建优于脚手架**：对于有明确架构设计的项目，手动创建所有文件比 `create-tauri-app` 更精准
+- **WebView2 颜色对话框焦点限制**：`<input type="color">` 原生对话框在任何焦点变化时自动关闭。跨窗口预览需通过事件在主窗口侧模拟，而非切换焦点
+- **Tauri v2 窗口销毁/重建陷阱**：销毁 webview 后用相同 label 重新创建可能导致 webview 挂起（白屏、主窗口冻结）。保持隐藏比重建更安全
+- **Tailwind v4 JIT 扫描限制**：动态字符串插值对 Tailwind 扫描器不透明。运行时动态类名应改用 inline style
+- **Zustand 多 webview 隔离**：每个 webview 有独立的 JavaScript 上下文和 Zustand store 实例。跨窗口状态同步必须通过 Tauri 事件，不能依赖 store 共享
+- **拖拽排序持久化陷阱**：不仅需持久化被拖拽项，所有受影响项的排序值也需同步更新
 
 ### 参考资料
 - [Tauri v2 窗口自定义](https://tauri.app/learn/window-customization/)

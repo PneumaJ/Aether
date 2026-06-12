@@ -3,31 +3,6 @@ import { Menu, MenuItem, PredefinedMenuItem } from "@tauri-apps/api/menu";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { invoke } from "@tauri-apps/api/core";
 
-async function showSettingsWindow() {
-  let win = await WebviewWindow.getByLabel("settings");
-  if (!win) {
-    // Fallback: window wasn't created at startup, try to invoke quit_app to trigger
-    // settings window creation, or create it programmatically
-    console.warn("Settings window not found, creating...");
-    win = new WebviewWindow("settings", {
-      url: "index.html",
-      title: "Aether - Settings",
-      width: 420,
-      height: 520,
-      resizable: false,
-      decorations: true,
-      transparent: false,
-      alwaysOnTop: true,
-      center: true,
-      visible: false,
-    });
-    // Wait briefly for the webview to initialize
-    await new Promise((resolve) => setTimeout(resolve, 500));
-  }
-  await win.show();
-  await win.setFocus();
-}
-
 export function useContextMenu() {
   const menuRef = useRef<Menu | null>(null);
 
@@ -48,7 +23,7 @@ export function useContextMenu() {
 
       const settingsItem = await MenuItem.new({
         text: "设置...",
-        action: () => showSettingsWindow(),
+        action: () => { invoke("show_settings_window").catch(() => {}); },
       });
 
       const separator = await PredefinedMenuItem.new({ item: "Separator" });

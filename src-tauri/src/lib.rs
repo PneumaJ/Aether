@@ -109,11 +109,7 @@ pub fn run() {
                             }
                         }
                         "settings" => {
-                            if let Some(window) = app.get_webview_window("settings") {
-                                let _ = window.unminimize();
-                                let _ = window.show();
-                                let _ = window.set_focus();
-                            }
+                            let _ = commands::show_settings_window(app.clone());
                         }
                         "quit" => {
                             app.exit(0);
@@ -156,6 +152,7 @@ pub fn run() {
             commands::get_settings,
             commands::save_settings,
             commands::quit_app,
+            commands::show_settings_window,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

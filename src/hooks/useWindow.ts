@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { useUIStore } from "../stores/uiStore";
-import { useSettingsStore } from "../stores/settingsStore";
+import { useSettingsStore, applyCssSettings } from "../stores/settingsStore";
 
 export function useWindow() {
   const appWindow = getCurrentWindow();
@@ -28,35 +28,44 @@ export function useWindow() {
     let unlistenFocus: (() => void) | undefined;
     let unlistenMoved: (() => void) | undefined;
     let unlistenResized: (() => void) | undefined;
+    let cancelled = false;
 
     appWindow.onFocusChanged(({ payload: focused }) => {
+      if (cancelled) return;
       setWindowFocused(focused);
       appWindow.setSkipTaskbar(!focused);
+      if (focused) {
+        applyCssSettings(useSettingsStore.getState().settings);
+      }
     }).then((fn) => {
+      if (cancelled) { fn(); return; }
       unlistenFocus = fn;
     });
 
-    // Track position changes for "remember position" setting
     appWindow.onMoved(() => {
+      if (cancelled) return;
       const { settings, loaded } = useSettingsStore.getState();
       if (!loaded || !settings.remember_position) return;
       if (saveTimer.current) clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(persistPosition, 1000);
     }).then((fn) => {
+      if (cancelled) { fn(); return; }
       unlistenMoved = fn;
     });
 
-    // Track resize changes
     appWindow.onResized(() => {
+      if (cancelled) return;
       const { settings, loaded } = useSettingsStore.getState();
       if (!loaded || !settings.remember_position) return;
       if (saveTimer.current) clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(persistPosition, 1000);
     }).then((fn) => {
+      if (cancelled) { fn(); return; }
       unlistenResized = fn;
     });
 
     return () => {
+      cancelled = true;
       unlistenFocus?.();
       unlistenMoved?.();
       unlistenResized?.();

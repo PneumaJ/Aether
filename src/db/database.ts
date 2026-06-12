@@ -77,6 +77,17 @@ export async function updatePlan(input: UpdatePlanInput): Promise<void> {
   );
 }
 
+export async function bulkUpdateSortOrders(items: { id: number; sort_order: number }[]): Promise<void> {
+  if (items.length === 0) return;
+  const database = await getDb();
+  for (const item of items) {
+    await database.execute(
+      "UPDATE plans SET sort_order = $1 WHERE id = $2",
+      [item.sort_order, item.id]
+    );
+  }
+}
+
 export async function deletePlan(id: number): Promise<void> {
   const database = await getDb();
   await database.execute("DELETE FROM plans WHERE id = $1", [id]);

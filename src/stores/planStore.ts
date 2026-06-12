@@ -5,6 +5,7 @@ import {
   insertPlan as dbInsertPlan,
   updatePlan as dbUpdatePlan,
   deletePlan as dbDeletePlan,
+  bulkUpdateSortOrders,
 } from "../db/database";
 
 interface PlanState {
@@ -82,7 +83,7 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     const newPlans = updated.map((p, i) => ({ ...p, sort_order: i }));
     set({ plans: newPlans });
 
-    await dbUpdatePlan({ id, sort_order: toIndex });
+    await bulkUpdateSortOrders(newPlans.map((p) => ({ id: p.id, sort_order: p.sort_order })));
   },
 
   togglePlan: async (id) => {

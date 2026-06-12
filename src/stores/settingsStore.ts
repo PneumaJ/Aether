@@ -10,22 +10,37 @@ interface SettingsState {
   loaded: boolean;
   setSettings: (settings: AppSettings) => void;
   updateSetting: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => void;
+  updateSettings: (partial: Partial<AppSettings>) => void;
   load: () => Promise<void>;
   save: () => Promise<void>;
   resetDefaults: () => void;
 }
 
-function applyCssSettings(settings: AppSettings) {
-  // CSS variables are only relevant for the main window; the settings webview
-  // has its own locked font-size and doesn't render the frosted glass shell.
+export function hexToRgba(hex: string, alpha: number): string {
+  const clamped = Math.max(0, Math.min(1, alpha));
+  let h = hex;
+  if (/^#[0-9a-fA-F]{3}$/.test(h)) {
+    h = `#${h[1]}${h[1]}${h[2]}${h[2]}${h[3]}${h[3]}`;
+  }
+  if (!/^#[0-9a-fA-F]{6}$/.test(h)) return "transparent";
+  const r = parseInt(h.slice(1, 3), 16);
+  const g = parseInt(h.slice(3, 5), 16);
+  const b = parseInt(h.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${clamped})`;
+}
+
+export function applyCssSettings(settings: AppSettings) {
   const win = getCurrentWebviewWindow();
   if (win.label !== "main") return;
 
   const root = document.documentElement;
   root.style.setProperty("--settings-font-color", settings.font_color);
   root.style.setProperty("--settings-font-size", `${settings.font_size}px`);
-  root.style.setProperty("--settings-bg-opacity-focused", String(settings.bg_opacity_focused));
-  root.style.setProperty("--settings-bg-opacity-blurred", String(settings.bg_opacity_blurred));
+  root.style.setProperty("--settings-bg-color-focused", hexToRgba(settings.bg_color_focused, settings.bg_opacity_focused));
+  root.style.setProperty("--settings-bg-color-blurred", hexToRgba(settings.bg_color_blurred, settings.bg_opacity_blurred));
+  root.style.setProperty("--settings-bg-image-opacity", String(settings.bg_image_opacity));
+  root.style.setProperty("--settings-bg-image-pos-x", `${settings.bg_image_position_x}%`);
+  root.style.setProperty("--settings-bg-image-pos-y", `${settings.bg_image_position_y}%`);
   if (settings.bg_image_path) {
     const assetUrl = convertFileSrc(settings.bg_image_path);
     root.style.setProperty("--settings-bg-image", `url('${assetUrl}')`);
@@ -46,10 +61,13 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   updateSetting: (key, value) => {
     const newSettings = { ...get().settings, [key]: value };
     set({ settings: newSettings });
-    // Apply CSS immediately on the current window
     applyCssSettings(newSettings);
-    // Broadcast to all windows without persisting to disk
-    invoke("save_settings", { settings: newSettings, persist: false }).catch(() => {});
+  },
+
+  updateSettings: (partial: Partial<AppSettings>) => {
+    const newSettings = { ...get().settings, ...partial };
+    set({ settings: newSettings });
+    applyCssSettings(newSettings);
   },
 
   load: async () => {

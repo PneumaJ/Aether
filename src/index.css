@@ -7,9 +7,12 @@
 :root {
   --settings-font-color: rgba(255, 255, 255, 0.95);
   --settings-font-size: 14px;
-  --settings-bg-opacity-focused: 0.45;
-  --settings-bg-opacity-blurred: 0.08;
+  --settings-bg-color-focused: rgba(0, 0, 0, 0.45);
+  --settings-bg-color-blurred: rgba(255, 255, 255, 0.08);
   --settings-bg-image: none;
+  --settings-bg-image-opacity: 1;
+  --settings-bg-image-pos-x: 50%;
+  --settings-bg-image-pos-y: 50%;
 }
 
 /* ============================================
@@ -66,12 +69,14 @@ body,
   content: "";
   position: absolute;
   inset: 0;
-  z-index: 0;
+  z-index: -1;
   background-image: var(--settings-bg-image);
   background-size: cover;
-  background-position: center;
+  background-position: var(--settings-bg-image-pos-x, 50%) var(--settings-bg-image-pos-y, 50%);
+  opacity: var(--settings-bg-image-opacity, 1);
   border-radius: 11px;
   pointer-events: none;
+  transition: opacity 0.25s ease;
 }
 
 .glass-shell {
@@ -98,11 +103,11 @@ body,
 }
 
 .glass-focused {
-  background: rgba(0, 0, 0, var(--settings-bg-opacity-focused)) !important;
+  background: var(--settings-bg-color-focused) !important;
 }
 
 .glass-blurred {
-  background: rgba(255, 255, 255, var(--settings-bg-opacity-blurred)) !important;
+  background: var(--settings-bg-color-blurred) !important;
 }
 
 /* ============================================
