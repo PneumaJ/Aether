@@ -91,7 +91,7 @@ export function PlanList() {
 
         {dailyDone.length > 0 && (
           <>
-            <div className="border-t border-dashed border-glass-text-muted/25 my-2" />
+            <div className="border-t border-dashed border-glass-text-muted/25 my-1" />
             <SortableGroup
               items={dailyDone}
               globalOffset={dailyDoneOffset}
@@ -126,7 +126,7 @@ export function PlanList() {
 
         {todayDone.length > 0 && (
           <>
-            <div className="border-t border-dashed border-glass-text-muted/25 my-2" />
+            <div className="border-t border-dashed border-glass-text-muted/25 my-1" />
             <SortableGroup
               items={todayDone}
               globalOffset={todayDoneOffset}

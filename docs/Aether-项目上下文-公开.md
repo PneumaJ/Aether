@@ -1,8 +1,8 @@
 # 对话上下文 — Aether 项目完整上下文（公开版）
 
-> **生成日期**：2026-06-12  
-> **涵盖阶段**：项目初始化（骨架搭建）→ 设置窗口与系统功能 → UI 打磨与 Bug 修复 → 打包发布 → 代码审查与优化  
-> **当前版本**：**v0.1.1** — 代码审查与优化完成，9 项修复，零已知 bug
+> **生成日期**：2026-06-13  
+> **涵盖阶段**：项目初始化（骨架搭建）→ 设置窗口与系统功能 → UI 打磨与 Bug 修复 → 打包发布 → 代码审查与优化 → UI 间距优化  
+> **当前版本**：**v0.1.1** — UI 间距优化完成，31 项修复，零已知 bug
 
 ---
 
@@ -69,6 +69,7 @@ CREATE TABLE plans (
 | 28 | `DateGroup` 全量订阅 `useUIStore` 导致无关重渲染 | `isLoading`/`headerText` 等变化都会触发重渲染 | 拆分为 4 个独立 selector | 优化 |
 | 29 | `useWindow` 快速卸载时事件监听器可能泄漏 | `.then()` 回调在组件卸载后才执行 | 添加 `cancelled` 标志，清理函数中取消尚未 resolve 的 listener | 优化 |
 | 30 | `hexToRgba` 不 clamp alpha 且不支持 3 位 hex | — | 添加 `Math.max(0, Math.min(1, alpha))` 约束 + 3 位 hex 自动展开 | 优化 |
+| 31 | 计划项间距及已完成/未完成分割线间距过大 | PlanItem `py-1.5`（6px）产生 12px 内间距，虚线 `my-2`（8px）产生 29px 分割区 | PlanItem `py-1.5` → `py-1`（4px，内间距 8px），虚线 `my-2` → `my-1`（4px，分割区 13px），分割区略大于内部间距保持分组辨识度 | 间距 |
 
 ---
 
@@ -119,6 +120,11 @@ CREATE TABLE plans (
 - [x] Zustand selector 优化 + 事件监听器清理保护
 - [x] `hexToRgba` 健壮性增强
 - [x] 打包 v0.1.1（MSI + NSIS）
+
+### 阶段五：UI 间距优化（已完成）
+- [x] 计划项间距缩减（`py-1.5` → `py-1`：12px → 8px）
+- [x] 已完成/未完成虚线分割间距缩减（`my-2` → `my-1`：29px → 13px）
+- [x] 分割区域总距离（13px）略大于内部间距（8px），分组辨识度保留
 
 ---
 
@@ -349,6 +355,12 @@ applyCssSettings() 入口检测：
 | `src-tauri/src/lib.rs` | settings 窗口隐藏模式 + 托盘集成 |
 | `src/lib/date.ts` | **新建** — 共享日期工具函数 |
 | `src/components/common/IconButton.tsx` | **删除** — 完全未被使用 |
+
+### 修改文件（阶段五：UI 间距优化）
+| 文件 | 变更 |
+|------|------|
+| `src/components/plan/PlanItem.tsx` | `py-1.5` → `py-1`（垂直 padding 从 6px 缩减至 4px） |
+| `src/components/plan/PlanList.tsx` | 两处已完成/未完成虚线分割 `my-2` → `my-1`（margin 从 8px 缩减至 4px） |
 
 ---
 

@@ -62,7 +62,7 @@ export function PlanItem({ plan, onToggle, onDelete, onEdit }: PlanItemProps) {
       {...attributes}
       {...listeners}
       className={cn(
-        "animate-fade-in group flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors",
+        "animate-fade-in group flex items-center gap-2 rounded-md px-2 py-1 transition-colors",
         isDragging && "relative z-10 scale-[1.03] shadow-lg shadow-black/40 bg-glass-bg-hover opacity-90",
         !isDragging && "hover:bg-glass-bg-hover"
       )}
