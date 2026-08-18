@@ -17,6 +17,7 @@ Thumbs.db
 
 # Claude
 .claude/
+AGENTS.md
 
 # Generated context docs (personal paths)
 对话上下文-*.md

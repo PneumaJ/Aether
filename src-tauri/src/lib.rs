@@ -11,6 +11,51 @@ mod settings;
 
 const DB_URL: &str = "sqlite:aether.db";
 
+/// 切换主窗口 WS_EX_NOACTIVATE：开启后系统关闭/最小化其他前台窗口时不会激活 Aether；
+/// 显式唤出前必须临时关闭，否则 set_focus 可能失效。
+#[cfg(target_os = "windows")]
+fn set_window_noactivate<H: raw_window_handle::HasWindowHandle>(window: &H, enable: bool) {
+    use raw_window_handle::RawWindowHandle;
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        GetWindowLongPtrW, SetWindowLongPtrW, GWL_EXSTYLE, WS_EX_NOACTIVATE,
+    };
+
+    let Ok(handle) = window.window_handle() else {
+        return;
+    };
+    let RawWindowHandle::Win32(win32) = handle.as_raw() else {
+        return;
+    };
+    let hwnd = win32.hwnd.get() as isize as windows_sys::Win32::Foundation::HWND;
+
+    unsafe {
+        let style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+        let new_style = if enable {
+            style | WS_EX_NOACTIVATE as isize
+        } else {
+            style & !(WS_EX_NOACTIVATE as isize)
+        };
+        SetWindowLongPtrW(hwnd, GWL_EXSTYLE, new_style);
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn set_window_noactivate<H>(_window: &H, _enable: bool) {}
+
+fn show_and_focus<R: tauri::Runtime>(window: &tauri::WebviewWindow<R>) {
+    set_window_noactivate(window, false);
+    let _ = window.unminimize();
+    let _ = window.show();
+    let _ = window.set_focus();
+}
+
+#[tauri::command]
+fn activate_main_window(app: tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        show_and_focus(&window);
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let migrations = vec![
@@ -46,6 +91,8 @@ pub fn run() {
             let settings = settings::load_settings(&app.handle());
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.set_focus();
+                // Aether 是托盘驻留小部件：始终不占用任务栏，避免被动聚焦时图标闪现
+                let _ = window.set_skip_taskbar(true);
                 let _ = window.set_ignore_cursor_events(settings.click_through);
                 if settings.remember_position {
                     // Restore size BEFORE position to avoid position-dependent resize
@@ -58,6 +105,8 @@ pub fn run() {
                         let _ = window.set_position(PhysicalPosition::new(x as i32, y as i32));
                     }
                 }
+                // 启动聚焦完成后再启用 NOACTIVATE，保留启动即聚焦
+                set_window_noactivate(&window, true);
             }
 
             // Ensure settings window exists (create if config didn't auto-create it)
@@ -103,9 +152,7 @@ pub fn run() {
                     match event.id.as_ref() {
                         "show" => {
                             if let Some(window) = app.get_webview_window("main") {
-                                let _ = window.unminimize();
-                                let _ = window.show();
-                                let _ = window.set_focus();
+                                show_and_focus(&window);
                             }
                         }
                         "settings" => {
@@ -129,8 +176,7 @@ pub fn run() {
                             if window.is_visible().unwrap_or(false) {
                                 let _ = window.hide();
                             } else {
-                                let _ = window.show();
-                                let _ = window.set_focus();
+                                show_and_focus(&window);
                             }
                         }
                     }
@@ -140,12 +186,21 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            if let WindowEvent::CloseRequested { api, .. } = event {
-                let label = window.label();
-                if label == "main" || label == "settings" {
-                    api.prevent_close();
-                    let _ = window.hide();
+            match event {
+                WindowEvent::CloseRequested { api, .. } => {
+                    let label = window.label();
+                    if label == "main" || label == "settings" {
+                        api.prevent_close();
+                        let _ = window.hide();
+                    }
                 }
+                // 失焦即回到"被动小部件"状态：重新启用 NOACTIVATE，防再次聚焦抢占
+                WindowEvent::Focused(focused) => {
+                    if window.label() == "main" && !*focused {
+                        set_window_noactivate(window, true);
+                    }
+                }
+                _ => {}
             }
         })
         .invoke_handler(tauri::generate_handler![
@@ -153,6 +208,7 @@ pub fn run() {
             commands::save_settings,
             commands::quit_app,
             commands::show_settings_window,
+            activate_main_window,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

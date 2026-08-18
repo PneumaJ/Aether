@@ -33,7 +33,6 @@ export function useWindow() {
     appWindow.onFocusChanged(({ payload: focused }) => {
       if (cancelled) return;
       setWindowFocused(focused);
-      appWindow.setSkipTaskbar(!focused);
       if (focused) {
         applyCssSettings(useSettingsStore.getState().settings);
       }

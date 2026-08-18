@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useUIStore } from "../../stores/uiStore";
 import { applyCssSettings, useSettingsStore } from "../../stores/settingsStore";
@@ -63,6 +64,10 @@ export function AppShell({ children }: AppShellProps) {
         isFocused || previewFocused ? "glass-focused" : "glass-blurred"
       )}
       style={{ color: "var(--settings-font-color)" }}
+      onPointerDown={() => {
+        // 用户点击小部件时显式激活（解除 NOACTIVATE 并聚焦），保证输入可用
+        invoke("activate_main_window");
+      }}
     >
       {/* Edge resize handles — thin strips along borders */}
       {RESIZE_EDGES.map(({ edge, direction, style }) => (

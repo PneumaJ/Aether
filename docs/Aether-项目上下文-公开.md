@@ -1,8 +1,8 @@
 # 对话上下文 — Aether 项目完整上下文（公开版）
 
-> **生成日期**：2026-06-13  
-> **涵盖阶段**：项目初始化（骨架搭建）→ 设置窗口与系统功能 → UI 打磨与 Bug 修复 → 打包发布 → 代码审查与优化 → UI 间距优化  
-> **当前版本**：**v0.1.1** — UI 间距优化完成，31 项修复，零已知 bug
+> **生成日期**：2026-08-18  
+> **涵盖阶段**：项目初始化（骨架搭建）→ 设置窗口与系统功能 → UI 打磨与 Bug 修复 → 打包发布 → 代码审查与优化 → UI 间距优化 → 任务栏与聚焦修复  
+> **当前版本**：**v0.1.2** — 任务栏图标与聚焦抢占修复完成，33 项修复，零已知 bug
 
 ---
 
@@ -70,6 +70,8 @@ CREATE TABLE plans (
 | 29 | `useWindow` 快速卸载时事件监听器可能泄漏 | `.then()` 回调在组件卸载后才执行 | 添加 `cancelled` 标志，清理函数中取消尚未 resolve 的 listener | 优化 |
 | 30 | `hexToRgba` 不 clamp alpha 且不支持 3 位 hex | — | 添加 `Math.max(0, Math.min(1, alpha))` 约束 + 3 位 hex 自动展开 | 优化 |
 | 31 | 计划项间距及已完成/未完成分割线间距过大 | PlanItem `py-1.5`（6px）产生 12px 内间距，虚线 `my-2`（8px）产生 29px 分割区 | PlanItem `py-1.5` → `py-1`（4px，内间距 8px），虚线 `my-2` → `my-1`（4px，分割区 13px），分割区略大于内部间距保持分组辨识度 | 间距 |
+| 32 | 关闭/最小化其他窗口回到桌面时，任务栏闪现 Aether 图标 | `useWindow.ts` 中 `setSkipTaskbar(!focused)` 随被动聚焦变化切换图标显隐 | 永久 `set_skip_taskbar(true)` 跳过任务栏，移除 JS 端切换逻辑 | 修复 |
+| 33 | 关闭/最小化其他窗口回到桌面时，Aether 被系统聚焦一次 | Windows 在关闭/最小化前台窗口时激活 Z 序最顶层的置顶窗口 | 主窗口加 `WS_EX_NOACTIVATE`；点击时经 `activate_main_window` 命令临时解除并聚焦，失焦后重新启用 | 修复 |
 
 ---
 
@@ -125,6 +127,12 @@ CREATE TABLE plans (
 - [x] 计划项间距缩减（`py-1.5` → `py-1`：12px → 8px）
 - [x] 已完成/未完成虚线分割间距缩减（`my-2` → `my-1`：29px → 13px）
 - [x] 分割区域总距离（13px）略大于内部间距（8px），分组辨识度保留
+
+### 阶段六：任务栏与聚焦修复（已完成，v0.1.2）
+- [x] 任务栏图标闪现修复：永久 `set_skip_taskbar(true)` + 移除 JS 切换
+- [x] 聚焦抢占修复：`WS_EX_NOACTIVATE` + 点击重新激活闭环
+- [x] 版本号三处同步至 0.1.2（package.json / tauri.conf.json / Cargo.toml）
+- [x] 打包 v0.1.2（MSI + NSIS）
 
 ---
 
@@ -362,13 +370,23 @@ applyCssSettings() 入口检测：
 | `src/components/plan/PlanItem.tsx` | `py-1.5` → `py-1`（垂直 padding 从 6px 缩减至 4px） |
 | `src/components/plan/PlanList.tsx` | 两处已完成/未完成虚线分割 `my-2` → `my-1`（margin 从 8px 缩减至 4px） |
 
+### 修改文件（阶段六：任务栏与聚焦修复，v0.1.2）
+| 文件 | 变更 |
+|------|------|
+| `src-tauri/src/lib.rs` | 新增 `set_window_noactivate`/`show_and_focus`/`activate_main_window`；setup 中 `set_skip_taskbar(true)` + 启动聚焦后启用 NOACTIVATE；托盘/菜单唤出改用 `show_and_focus`；失焦事件重新启用 NOACTIVATE |
+| `src/hooks/useWindow.ts` | 移除 `setSkipTaskbar(!focused)` 切换（任务栏图标不再随聚焦变化） |
+| `src/components/layout/AppShell.tsx` | 根元素 `onPointerDown` 调用 `invoke("activate_main_window")`，点击时显式激活 |
+| `src-tauri/Cargo.toml` | 版本号 0.1.0 → 0.1.2；新增 `[target.'cfg(windows)'.dependencies]`：`raw-window-handle`、`windows-sys` |
+| `package.json` | 版本号 0.1.1 → 0.1.2 |
+| `src-tauri/tauri.conf.json` | 版本号 0.1.1 → 0.1.2 |
+
 ---
 
 ## 🐛 已知问题和待解决
 
 | # | 问题 | 优先级 | 位置 | 状态 |
 |---|------|--------|------|------|
-| — | 无已知问题 | — | — | v0.1.1 全部功能正常，零 bug |
+| — | 无已知问题 | — | — | v0.1.2 全部功能正常，零 bug |
 
 ---
 
@@ -387,8 +405,8 @@ pnpm tauri dev
 ```bash
 pnpm tauri build
 # 输出:
-#   src-tauri/target/release/bundle/nsis/Aether_0.1.1_x64-setup.exe
-#   src-tauri/target/release/bundle/msi/Aether_0.1.1_x64_en-US.msi
+#   src-tauri/target/release/bundle/nsis/Aether_0.1.2_x64-setup.exe
+#   src-tauri/target/release/bundle/msi/Aether_0.1.2_x64_en-US.msi
 ```
 
 ### 注意事项
@@ -457,7 +475,7 @@ pnpm tauri build
 
 ## 🚀 下一步计划
 
-当前版本（v0.1.1）核心功能已全部完成，代码已审查优化。可能的后续方向：
+当前版本（v0.1.2）核心功能已全部完成，代码已审查优化。可能的后续方向：
 
 1. **功能增强**：每日计划模板、数据导出/导入、多日视图
 2. **UI 增强**：更多主题色方案、动画过渡、自定义毛玻璃强度
@@ -482,6 +500,10 @@ pnpm tauri build
 - **Tailwind v4 JIT 扫描限制**：动态字符串插值对 Tailwind 扫描器不透明。运行时动态类名应改用 inline style
 - **Zustand 多 webview 隔离**：每个 webview 有独立的 JavaScript 上下文和 Zustand store 实例。跨窗口状态同步必须通过 Tauri 事件，不能依赖 store 共享
 - **拖拽排序持久化陷阱**：不仅需持久化被拖拽项，所有受影响项的排序值也需同步更新
+- **Windows 聚焦抢占**：`alwaysOnTop` 置顶窗口位于 Z 序顶部，系统关闭/最小化前台窗口时会把激活派给它。用 `WS_EX_NOACTIVATE` 扩展样式阻止系统激活；显式唤出/点击前必须临时解除再 `set_focus()`，失焦后重新启用
+- **NOACTIVATE 与键盘输入的矛盾**：`WS_EX_NOACTIVATE` 会阻止点击激活，导致输入框无法获取键盘焦点。解法：点击时经 Rust 命令先解除样式再聚焦，失焦事件中重新启用
+- **raw-window-handle 0.6**：`Win32WindowHandle.hwnd` 是 `NonZeroIsize`（非 `NonNull<c_void>`），需 `.get()` 后转 `HWND`；tauri 未 re-export `raw_window_handle`，须直接声明依赖
+- **skip_taskbar 全量接管**：托盘驻留小部件应始终跳过任务栏，聚焦变化不应触发任务栏图标显隐
 
 ### 参考资料
 - [Tauri v2 窗口自定义](https://tauri.app/learn/window-customization/)
