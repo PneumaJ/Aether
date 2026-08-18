@@ -26,3 +26,9 @@ docs/对话上下文-*.md
 # Env
 .env
 .env.local
+
+# Testing artifacts
+coverage/
+e2e/.logs/
+.pnpm-store/
+.cargo-config-tmp.toml

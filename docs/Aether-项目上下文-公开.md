@@ -510,3 +510,51 @@ pnpm tauri build
 - [Tauri v2 配置 Schema](https://schema.tauri.app/config/2)
 - [tauri-plugin-sql 文档](https://v2.tauri.app/plugin/sql)
 - [Tailwind CSS v4 文档](https://tailwindcss.com/docs/v4-beta)
+
+---
+
+## 🔄 测试会话交接（2026-08-18/19）
+
+> **会话类型**：纯测试专项（完整审计 + 自动化测试体系建设）
+> **总原则**：生产代码逻辑未被修改；唯一文件级改动是 `src-tauri/src/settings.rs` 末尾追加 `#[cfg(test)]` 测试模块（+72 行，仅测试代码）。
+
+### 变更清单
+
+| 类型 | 文件 | 说明 |
+|------|------|------|
+| 修改 | `package.json` | 新增 5 个测试脚本 + 13 个测试依赖（vitest、jsdom、@testing-library、@wdio/*、webdriverio、edgedriver、ts-node 等） |
+| 修改 | `pnpm-lock.yaml` | 同步新依赖 |
+| 修改 | `src-tauri/src/settings.rs` | 仅追加 `#[cfg(test)] mod tests`（4 个测试），未动生产逻辑 |
+| 新增 | `vitest.config.ts`、`src/test/`、11 个单元测试文件 | 单元测试体系 |
+| 新增 | `e2e/`（wdio.conf.cjs + 7 个 spec） | WebdriverIO + tauri-driver E2E |
+| 新增 | `tests/manual-checklist.md` | 人工功能验证清单（未执行） |
+| 新增 | `docs/audit-findings.md`、`docs/test-report-2026-08-18.md` | 15 条审计发现（未修复）+ 测试报告 |
+| 新增 | `docs/superpowers/specs/`、`docs/superpowers/plans/` | 测试设计与实施计划 |
+| 新增 | `pnpm-workspace.yaml` | pnpm 10 allowBuilds（edgedriver/esbuild/geckodriver） |
+| 删除 | `scripts/`（md2pdf.py） | 多余残留，按用户要求删除 |
+
+### <span style="color:red">⚠️ 冲突高风险（后续开发/修复 agent 必须注意）</span>
+
+1. <span style="color:red">**`package.json` / `pnpm-lock.yaml`**：开发侧与测试侧都可能改依赖。任何一侧改动前先同步最新状态，改动后必须 `pnpm install` 并跑 `pnpm test`。</span>
+2. <span style="color:red">**`src-tauri/src/settings.rs`**：文件末尾存在 `#[cfg(test)] mod tests`。修改该文件生产逻辑时不得删除或覆盖测试模块；若字段结构变化，须同步更新这 4 个测试。</span>
+3. <span style="color:red">**测试文件由测试侧维护**：`src/**/*.test.*`、`e2e/`、`vitest.config.ts`、`tests/` 不要被开发侧顺手改动；确需修改先沟通。</span>
+4. <span style="color:red">**不要两个 agent 在同一工作目录并发改文件**：使用独立分支 / git worktree，或串行工作；先合并测试分支再合并开发分支。</span>
+5. <span style="color:red">**提交闸门**：任何提交前必须 `pnpm test`（55 单测）与 `pnpm test:rust`（4 用例）通过；E2E 需 vite + tauri-driver 前置。</span>
+
+### 已验证结果
+
+- 单元测试：13 文件 / 55 用例全部通过；覆盖率 all files 行 26.5%（核心逻辑模块 81–100%）
+- E2E：6/6 通过（smoke、计划 CRUD、日期导航、设置保存落盘、跨重启持久化）；拖拽排序转人工清单
+- 构建：`pnpm build`、`cargo check`、`pnpm tauri build --debug --no-bundle` 均通过
+- Rust 测试：4 个用例编译通过；**沙箱内无法运行**（0xC0000139，WebView2 加载器相关），需在本机执行 `pnpm test:rust`
+
+### 未完成 / 待办
+
+- 本机运行 `pnpm test:rust` 验证 4 个 Rust 用例
+- `tests/manual-checklist.md` 人工验证（托盘、聚焦/任务栏、渲染等原生行为）
+- `docs/audit-findings.md` 的 15 条发现**只记录未修复**，留给开发侧处理
+
+### 测试副作用
+
+- E2E 设置测试会把 `font_size` 保存为 18（用户可自行在设置中改回）
+- 测试残留计划数据已由 `e2e/specs/_cleanup.spec.ts` 清理

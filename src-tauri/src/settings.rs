@@ -70,3 +70,75 @@ pub fn save_settings(app_handle: &tauri::AppHandle, settings: &AppSettings) -> R
     let json = serde_json::to_string_pretty(settings).map_err(|e| e.to_string())?;
     fs::write(&path, json).map_err(|e| e.to_string())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_settings_have_expected_values() {
+        let s = AppSettings::default();
+        assert_eq!(s.font_size, 14);
+        assert_eq!(s.font_color, "rgba(255, 255, 255, 0.95)");
+        assert_eq!(s.bg_opacity_focused, 0.45);
+        assert_eq!(s.bg_image_path, None);
+        assert!(!s.remember_position);
+        assert!(!s.auto_start);
+    }
+
+    #[test]
+    fn serde_roundtrip_preserves_all_fields() {
+        let s = AppSettings {
+            font_color: "#123456".into(),
+            font_size: 18,
+            bg_color_focused: "#000000".into(),
+            bg_opacity_focused: 0.5,
+            bg_color_blurred: "#FFFFFF".into(),
+            bg_opacity_blurred: 0.1,
+            bg_image_path: Some("C:/bg.png".into()),
+            bg_image_opacity: 0.8,
+            bg_image_position_x: 20.0,
+            bg_image_position_y: 80.0,
+            click_through: true,
+            remember_position: true,
+            auto_start: true,
+            window_x: Some(10.0),
+            window_y: Some(20.0),
+            window_width: Some(380.0),
+            window_height: Some(560.0),
+        };
+        let json = serde_json::to_string(&s).unwrap();
+        let back: AppSettings = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.font_color, s.font_color);
+        assert_eq!(back.font_size, s.font_size);
+        assert_eq!(back.bg_color_focused, s.bg_color_focused);
+        assert_eq!(back.bg_opacity_focused, s.bg_opacity_focused);
+        assert_eq!(back.bg_color_blurred, s.bg_color_blurred);
+        assert_eq!(back.bg_opacity_blurred, s.bg_opacity_blurred);
+        assert_eq!(back.bg_image_path, s.bg_image_path);
+        assert_eq!(back.bg_image_opacity, s.bg_image_opacity);
+        assert_eq!(back.bg_image_position_x, s.bg_image_position_x);
+        assert_eq!(back.bg_image_position_y, s.bg_image_position_y);
+        assert_eq!(back.click_through, s.click_through);
+        assert_eq!(back.remember_position, s.remember_position);
+        assert_eq!(back.auto_start, s.auto_start);
+        assert_eq!(back.window_x, s.window_x);
+        assert_eq!(back.window_y, s.window_y);
+        assert_eq!(back.window_width, s.window_width);
+        assert_eq!(back.window_height, s.window_height);
+    }
+
+    #[test]
+    fn missing_fields_fail_to_deserialize() {
+        let json = r##"{"font_color":"#fff"}"##;
+        assert!(serde_json::from_str::<AppSettings>(json).is_err());
+    }
+
+    #[test]
+    fn corrupt_json_is_rejected_by_serde() {
+        // load_settings 对坏文件通过 .ok() + unwrap_or_default() 回退默认值；
+        // 这里验证 serde 层面对坏 JSON 的失败行为，作为该容错路径的依据。
+        let json = "{ not valid json ";
+        assert!(serde_json::from_str::<AppSettings>(json).is_err());
+    }
+}
